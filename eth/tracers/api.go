@@ -845,6 +845,7 @@ func (api *API) traceTx(ctx context.Context, message core.Message, txctx *txTrac
 		posa.IsSystemContract(message.To()) && message.GasPrice().Cmp(big.NewInt(0)) == 0 {
 		balance := statedb.GetBalance(consensus.SystemAddress)
 		if balance.Cmp(common.Big0) > 0 {
+			log.Info("---- traceTx ----", "Coinbase", vmctx.Coinbase, "balance", balance)
 			statedb.SetBalance(consensus.SystemAddress, big.NewInt(0))
 			statedb.AddBalance(vmctx.Coinbase, balance)
 		}
