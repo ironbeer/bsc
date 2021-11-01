@@ -332,35 +332,43 @@ func (p *Parlia) verifyHeader(chain consensus.ChainHeaderReader, header *types.H
 		return consensus.ErrFutureBlock
 	}
 	// Check that the extra-data contains the vanity, validators and signature.
+	// memo: extraDataフィールドに32バイトのパディングが付与されているかチェック
 	if len(header.Extra) < extraVanity {
 		return errMissingVanity
 	}
+	// memo: extraDataフィールドに65バイトのサフィックスが含まれているかチェック
 	if len(header.Extra) < extraVanity+extraSeal {
 		return errMissingSignature
 	}
 	// check extra data
+	// memo: エポックブロックか判定
 	isEpoch := number%p.config.Epoch == 0
 
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
+	// memo: エポックブロック以外ではextraDataは空でなければいけない(正確にはVanityとSealは良い)
 	signersBytes := len(header.Extra) - extraVanity - extraSeal
 	if !isEpoch && signersBytes != 0 {
 		return errExtraValidators
 	}
 
+	// memo: バリデータセットの長さがイーサリアムアドレス(20byte * n)の倍数かチェック
 	if isEpoch && signersBytes%validatorBytesLength != 0 {
 		return errInvalidSpanValidators
 	}
 
 	// Ensure that the mix digest is zero as we don't have fork protection currently
+	// memo: Cliqueと共通
 	if header.MixDigest != (common.Hash{}) {
 		return errInvalidMixDigest
 	}
 	// Ensure that the block doesn't contain any uncles which are meaningless in PoA
+	// memo: Cliqueと共通
 	if header.UncleHash != uncleHash {
 		return errInvalidUncleHash
 	}
 	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
 	if number > 0 {
+		// memo: Parliaには難易度の概念が無いのでnilチェックだけでok
 		if header.Difficulty == nil {
 			return errInvalidDifficulty
 		}
@@ -785,6 +793,7 @@ func (p *Parlia) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *
 // Authorize injects a private key into the consensus engine to mint new blocks
 // with.
 func (p *Parlia) Authorize(val common.Address, signFn SignerFn, signTxFn SignerTxFn) {
+	log.Info("---- Authorize ----", "val", val)
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -943,6 +952,7 @@ func (p *Parlia) SignRecently(chain consensus.ChainReader, parent *types.Header)
 	// If we're amongst the recent signers, wait for the next block
 	number := parent.Number.Uint64() + 1
 	for seen, recent := range snap.Recents {
+		log.Info("----- SignRecently ----", "number", number, "seen", seen, "limit", uint64(len(snap.Validators)/2+1))
 		if recent == p.val {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Validators)/2 + 1); number < limit || seen > number-limit {
@@ -1049,6 +1059,7 @@ func (p *Parlia) distributeIncoming(val common.Address, state *state.StateDB, he
 	if balance.Cmp(common.Big0) <= 0 {
 		return nil
 	}
+	log.Info("---- distributeIncoming ----", "coinbase", coinbase, "balance", balance)
 	state.SetBalance(consensus.SystemAddress, big.NewInt(0))
 	state.AddBalance(coinbase, balance)
 
@@ -1124,6 +1135,7 @@ func (p *Parlia) initContract(state *state.StateDB, header *types.Header, chain 
 
 func (p *Parlia) distributeToSystem(amount *big.Int, state *state.StateDB, header *types.Header, chain core.ChainContext,
 	txs *[]*types.Transaction, receipts *[]*types.Receipt, receivedTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
+	log.Info("---- distributeToSystem ----", "coinbase", header.Coinbase, "amount", amount)
 	// get system message
 	msg := p.getSystemMessage(header.Coinbase, common.HexToAddress(systemcontracts.SystemRewardContract), nil, amount)
 	// apply message
@@ -1146,6 +1158,7 @@ func (p *Parlia) distributeToValidator(amount *big.Int, validator common.Address
 		return err
 	}
 	// get system message
+	log.Info("---- distributeToValidator ----", "coinbase", header.Coinbase, "amount", amount)
 	msg := p.getSystemMessage(header.Coinbase, common.HexToAddress(systemcontracts.ValidatorContract), data, amount)
 	// apply message
 	return p.applyTransaction(msg, state, header, chain, txs, receipts, receivedTxs, usedGas, mining)

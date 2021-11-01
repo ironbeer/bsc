@@ -63,69 +63,69 @@ type ChainReader interface {
 	GetBlock(hash common.Hash, number uint64) *types.Block
 }
 
-// Engine is an algorithm agnostic consensus engine.
+// Engineは、アルゴリズムに依存しないコンセンサスエンジンです。
 type Engine interface {
-	// Author retrieves the Ethereum address of the account that minted the given
-	// block, which may be different from the header's coinbase if a consensus
-	// engine is based on signatures.
+	// Authorは、与えられたブロックを鋳造したアカウントのEthereumアドレスを取得します。
+	// ブロックを鋳造したアカウントのEthereumアドレスを取得しますが、コンセンサスエンジンが署名に基づいている場合、ヘッダーのコインベースとは異なる可能性があります。
+	// これは、コンセンサスエンジンがシグネチャに基づいている場合、ヘッダのコインベースとは異なる可能性があります。
 	Author(header *types.Header) (common.Address, error)
 
-	// VerifyHeader checks whether a header conforms to the consensus rules of a
-	// given engine. Verifying the seal may be done optionally here, or explicitly
-	// via the VerifySeal method.
+	// VerifyHeaderは、ヘッダがあるエンジンのコンセンサスルールに適合しているかどうかをチェックします。
+	// 与えられたエンジンに適合しているかどうかをチェックします。シールの検証は、ここで任意に行うこともできますが、明示的に
+	// VerifySeal メソッドで明示的に行うこともできます。
 	VerifyHeader(chain ChainHeaderReader, header *types.Header, seal bool) error
 
-	// VerifyHeaders is similar to VerifyHeader, but verifies a batch of headers
-	// concurrently. The method returns a quit channel to abort the operations and
-	// a results channel to retrieve the async verifications (the order is that of
-	// the input slice).
+	// VerifyHeaders は VerifyHeader と似ていますが、ヘッダのバッチを検証します。
+	// 同時進行で検証します。このメソッドは，操作を中断するための quit チャネルと， // 検証結果を取得するための results チャネルを返します。
+	// 非同期の検証結果を取得するための結果チャンネルを返します（順序は入力スライスの
+	// 非同期検証を取得する結果チャネルを返します（順序は入力スライスの順序です）。)
 	VerifyHeaders(chain ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error)
 
-	// VerifyUncles verifies that the given block's uncles conform to the consensus
-	// rules of a given engine.
+	// VerifyUncles は、与えられたブロックのアンクルが、与えられたエンジンのコンセンサス
+	// 与えられたエンジンのコンセンサスルールに準拠しているかを検証します。
 	VerifyUncles(chain ChainReader, block *types.Block) error
 
-	// Prepare initializes the consensus fields of a block header according to the
-	// rules of a particular engine. The changes are executed inline.
+	// Prepare は、ブロックヘッダーのコンセンサスフィールドを、特定のエンジンのルールに従って初期化します。
+	// 特定のエンジンのルールに従ってブロックヘッダのコンセンサスフィールドを初期化します。変更はインラインで実行されます。
 	Prepare(chain ChainHeaderReader, header *types.Header) error
 
-	// Finalize runs any post-transaction state modifications (e.g. block rewards)
-	// but does not assemble the block.
+	// Finalizeは、トランザクション後の状態の変更（ブロックの報酬など）を実行します。
+	// しかし、ブロックの組み立ては行いません。
 	//
-	// Note: The block header and state database might be updated to reflect any
-	// consensus rules that happen at finalization (e.g. block rewards).
+	// 注意：ブロックヘッダと状態データベースは、ファイナライズ時に発生したコンセンサスルールを反映するために更新される可能性があります。
+	// ブロックヘッダと状態データベースは、ファイナライズ時に発生するコンセンサスルール（例：ブロックリワード）を反映するために更新されるかもしれません。
 	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 		uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error
 
-	// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block
-	// rewards) and assembles the final block.
+	// FinalizeAndAssemble は、トランザクション後の状態の変更 (例：ブロック
+	// 報酬など）を実行し、最終ブロックを組み立てます。
 	//
-	// Note: The block header and state database might be updated to reflect any
-	// consensus rules that happen at finalization (e.g. block rewards).
+	// 注意：ブロックヘッダと状態データベースは、最終的に発生したコンセンサスルールを反映するために更新されるかもしれません。
+	// ブロックヘッダと状態データベースが更新され、最終処理で発生するコンセンサスルールが反映されるかもしれません。
 	FinalizeAndAssemble(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error)
 
-	// Seal generates a new sealing request for the given input block and pushes
-	// the result into the given channel.
+	// Seal は、与えられた入力ブロックに対して新しいシーリング要求を生成し、その結果を与えられたチャネルにプッシュします。
+	// その結果を与えられたチャネルにプッシュします。
 	//
-	// Note, the method returns immediately and will send the result async. More
-	// than one result may also be returned depending on the consensus algorithm.
+	// なお、このメソッドはすぐに戻り、結果は非同期に送信されます。さらに
+	// コンセンサスアルゴリズムによっては、 // 複数の結果が返されることもあります。
 	Seal(chain ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error
 
-	// SealHash returns the hash of a block prior to it being sealed.
+	// SealHashは、シールされる前のブロックのハッシュを返します。
 	SealHash(header *types.Header) common.Hash
 
-	// CalcDifficulty is the difficulty adjustment algorithm. It returns the difficulty
-	// that a new block should have.
+	// CalcDifficultyは、難易度調整アルゴリズムです。これは、新しいブロックが持つべき難易度
+	// 新しいブロックが持つべき難易度を返します。
 	CalcDifficulty(chain ChainHeaderReader, time uint64, parent *types.Header) *big.Int
 
-	// APIs returns the RPC APIs this consensus engine provides.
+	// APIs このコンセンサス・エンジンが提供する RPC API を返します。
 	APIs(chain ChainHeaderReader) []rpc.API
 
-	// Delay returns the max duration the miner can commit txs
+	// Delay マイナーがtxsをコミットできる最大時間を返します。
 	Delay(chain ChainReader, header *types.Header) *time.Duration
 
-	// Close terminates any background threads maintained by the consensus engine.
+	// Close は、コンセンサスエンジンが維持しているバックグラウンドスレッドを終了させます。
 	Close() error
 }
 
