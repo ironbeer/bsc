@@ -176,6 +176,7 @@ func (eth *Ethereum) stateAtTransaction(block *types.Block, txIndex int, reexec 
 			posa.IsSystemContract(msg.To()) && msg.GasPrice().Cmp(big.NewInt(0)) == 0 {
 			balance := statedb.GetBalance(consensus.SystemAddress)
 			if balance.Cmp(common.Big0) > 0 {
+				log.Info("---- stateAtTransaction ----", "Coinbase", context.Coinbase, "balance", balance)
 				statedb.SetBalance(consensus.SystemAddress, big.NewInt(0))
 				statedb.AddBalance(context.Coinbase, balance)
 			}
