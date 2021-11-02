@@ -578,6 +578,7 @@ func (p *Parlia) verifySeal(chain consensus.ChainHeaderReader, header *types.Hea
 	}
 
 	for seen, recent := range snap.Recents {
+		log.Info("---- verifySeal ----", "signer", signer, "recent", recent, "seen", seen, "limit", uint64(len(snap.Validators)/2+1))
 		if recent == signer {
 			// Signer is among recents, only fail if the current block doesn't shift it out
 			if limit := uint64(len(snap.Validators)/2 + 1); seen > number-limit {
@@ -952,7 +953,7 @@ func (p *Parlia) SignRecently(chain consensus.ChainReader, parent *types.Header)
 	// If we're amongst the recent signers, wait for the next block
 	number := parent.Number.Uint64() + 1
 	for seen, recent := range snap.Recents {
-		log.Info("----- SignRecently ----", "number", number, "seen", seen, "limit", uint64(len(snap.Validators)/2+1))
+		log.Info("----- SignRecently ----", "number", number, "seen", seen, "recent", recent, "limit", uint64(len(snap.Validators)/2+1))
 		if recent == p.val {
 			// Signer is among recents, only wait if the current block doesn't shift it out
 			if limit := uint64(len(snap.Validators)/2 + 1); number < limit || seen > number-limit {
