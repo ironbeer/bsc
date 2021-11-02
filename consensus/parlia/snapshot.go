@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 	lru "github.com/hashicorp/golang-lru"
 )
@@ -166,6 +167,7 @@ func (s *Snapshot) apply(headers []*types.Header, chain consensus.ChainHeaderRea
 
 	for _, header := range headers {
 		number := header.Number.Uint64()
+		log.Info("----- apply ----", "number", number, "limit", uint64(len(snap.Validators)/2+1))
 		// Delete the oldest validator from the recent list to allow it signing again
 		if limit := uint64(len(snap.Validators)/2 + 1); number >= limit {
 			delete(snap.Recents, number-limit)
